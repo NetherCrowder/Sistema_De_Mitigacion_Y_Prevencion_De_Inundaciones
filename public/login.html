@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inicio de Sesión</title>
+    <!-- Agrega los enlaces a los archivos CSS de Bootstrap 5 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body>
+
+    <!-- Formulario de inicio de sesión -->
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="text-center">Inicio de Sesión</h3>
+                    </div>
+                    <div class="card-body">
+                        <!-- Agrega esto en tu archivo HTML donde quieras mostrar el formulario -->
+                        <div id="formularioAdministrador">
+                            <h2>Formulario de Administrador</h2>
+                            <form id="formCredenciales">
+                                <div class="mb-3">
+                                    <label for="usuario" class="form-label">Usuario</label>
+                                    <input type="text" class="form-control" id="usuario" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="contrasena" class="form-label">Contraseña</label>
+                                    <input type="password" class="form-control" id="contrasena" required>
+                                </div>
+                                <div class="text-center">
+                                    <button type="submit" class="btn btn-primary">Iniciar Sesión</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agrega los enlaces a los archivos JS de Bootstrap 5 y Popper.js -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Agrega jQuery en tu archivo HTML (asegúrate de incluirlo antes de este script) -->
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+
+<script>
+    // Maneja el envío del formulario al servidor
+    $('#formCredenciales').submit(function (event) {
+        event.preventDefault(); // Evita la recarga de la página
+
+        // Obtiene los valores del formulario
+        const usuario = $('#usuario').val();
+        const contrasena = $('#contrasena').val();
+
+        // Realiza la solicitud al servidor
+        $.ajax({
+            type: 'POST',
+            url: '/verificar-credenciales',
+            contentType: 'application/json',
+            data: JSON.stringify({ usuario, contrasena }),
+            success: function (response) {
+                // Maneja la respuesta del servidor
+                if (response.autenticado) {
+                    // Redirige a la página deseada en caso de credenciales correctas
+                    window.location.href = 'admin.html';
+                } else {
+                    // Muestra una alerta en caso de credenciales incorrectas
+                    alert(response.mensaje, function() {
+                        // Redirige a otra página después de cerrar la alerta
+                        window.location.href = 'index.html';
+                    });
+                }
+            },
+            error: function (error) {
+                console.error(error);
+                alert('Error al verificar credenciales');
+            }
+        });
+    });
+</script>
+</body>
+</html>

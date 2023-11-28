@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Se cargan los JS y CSS de Leaflet-->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js" integrity="sha384-IQsoLXl5PILFhosVNubq5LC7Qb9DXgDA9i+tQ8Zj3iwWAwPtgFTxbJ8NT4GN1R8p" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js" integrity="sha384-cVKIPhGWiC2Al4u+LWgxfKTRIcfu0JTxR+EQDz/bgldoEyl4H0zUF0QKbrJ0EcQF" crossorigin="anonymous"></script>
+    <title>Mapa de inundaciones en Quibdó</title>
+    <style>
+        .modal-body {
+            background-color: #ddd; /* Color gris para el fondo */
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .formulario h2 {
+        font-family: 'Times New Roman', Times, serif;
+        font-size: 24px;
+        color: #333;
+        margin-bottom: 20px;
+        }
+    
+        .formulario {
+            background-color: #fff; /* Color blanco para el formulario dentro del div gris */
+            border-radius: 8px;
+            padding: 20px;
+            width: 300px;
+            margin: 0 auto; /* Centrar el formulario en el div */
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+    
+        .formulario label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: bold;
+        }
+    
+        .formulario input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 16px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+    
+        .formulario button {
+            background-color: #4caf50;
+            color: #fff;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+    
+        .formulario button:hover {
+            background-color: #45a049;
+        }
+
+        .logo-container {
+        width: 300px;
+        height: 100px;
+        background-image: url('/Logo/Logos-USB-horizontal.png');
+        background-size: cover; /* O ajusta según tus necesidades */
+        }
+    </style>
+    
+</head>
+
+<header>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Inundaciones Quibdó</a>
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#contactModal">
+                En caso de que tu barrio no se vea en la lista de barrios con riesgo de inundaciones haz click aqui para comunicarte con nosotros
+            </button>
+        </div>
+        <div class="modal fade" id="contactModal" tabindex="-1" aria-labelledby="contactModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="contactModalLabel">Formulario de Contacto</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <h2 class="formulario">Formulario de Contacto</h2>
+
+                        <!-- Formulario con campos obligatorios -->
+                        <form id="formularioContacto" class="formulario" action="/enviar-correo" method="POST">
+                    
+                            <!-- Campo Nombre -->
+                            <label for="nombre">Nombre:</label>
+                            <input type="text" id="nombre" name="nombre" required>
+                    
+                            <!-- Campo Correo -->
+                            <label for="correo">Correo:</label>
+                            <input type="email" id="correo" name="correo" required>
+                    
+                            <!-- Campo Barrio -->
+                            <label for="barrio">Barrio:</label>
+                            <input type="text" id="barrio" name="barrio" required>
+                    
+                            <!-- Campo Dirección -->
+                            <label for="direccion">Dirección:</label>
+                            <input type="text" id="direccion" name="direccion" required>
+                    
+                            <!-- Botón de envío -->
+                            <button type="button" onclick="enviarFormulario()">Enviar</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+</header>
+
+<body>
+    <div class="container">
+        <div class="container ">
+            <div class="row">
+                <div class="col-8 col-lg">
+                    <div id="map" style="width: 100%; height: 85vh;"></div> <!-- Creación de una ID Mapa -->
+                </div>
+                <div class="col-4 col-lg">
+                    <!-- Agrega un elemento de selección para las tablas -->
+                    <label for="tablaSelect">Selecciona una tabla:</label>
+                    <select id="tablaSelect">
+                        <option value="Proyecciones">Proyección de la inundación más grande registrada</option>
+                        <option value="Invisibles">Proyección de las inundaciones no visualizadas</option>
+                        <option value="Recomendaciones">Recomendaciones para barrios con riesgo</option>
+                        <!-- Agrega más opciones según sea necesario -->
+                    </select>
+                
+                    <!-- Agrega un botón para realizar la consulta -->
+                    <button onclick="realizarConsulta()">Realizar Consulta</button>
+
+                    <div id="resultadoConsulta"></div>
+                </div>
+        </div>
+      </div> 
+      <div class="col-12 col-lg">        
+            <!-- Agrega esto en tu archivo HTML donde quieras mostrar los resultados -->
+        </div>
+    </div>
+</body>
+
+<footer>
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col">
+                <h5>Creadores</h5>
+                <p>LUIS AARÓN CHAVERRA PALACIOS</p>
+                <p>JOSÉ GABRIEL SERNA ROSERO</p>
+            </div>
+            <div class="col">
+                <h5>Asesores</h5>
+                <p>Jhonathan Ochoa Villegas</p>
+                <p>Sebastián Patiño</p>
+            </div>
+            <div class="col">
+                <!-- Agrega aquí la etiqueta de imagen con el enlace a tu imagen -->
+                <img src="https://i.imgur.com/KzQvp6x.png" width="300" height="100">
+            </div>
+        </div>
+    </div>
+</footer>
+
+<script>
+        var mymap = L.map('map').setView([5.6945, -76.6619], 14);
+        var geoJsonLayer; // Esta variable mantendrá la capa actual de GeoJSON
+        var rawData; // Almacenará los datos crudos de GeoJSON
+
+        var OpenStreetMap_DE = L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        });
+
+        var Esri_WorldImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        }).addTo(mymap);;
+
+        var baseMaps = {
+            "Satellital": Esri_WorldImagery,
+            "OSM Standard": OpenStreetMap_DE
+        };
+
+        // Capas superpuestas
+        var overlayMaps = {
+
+            
+        };
+
+    // Objeto de configuración con nombres personalizados y capas a omitir
+    const configCapas = {
+    "Construcciones_mnz": { nombreMostrar: "Construcciones", incluir: true },
+    "Barrios_De_Riesgo": { nombreMostrar: "Barrios con riesgo de inundación", incluir: true },
+    "Proyecciones_De_Inundacion_2015_2025": { nombreMostrar: "Inundación más grande registrada según GEE", incluir: true },
+    "Inundaciones_No_Visibles_Poblacion": { nombreMostrar: "Inundaciones no visualizadas por GEE", incluir: true },
+    // Agrega más capas según sea necesario
+    };
+
+    fetch('http://localhost:3000/layers')
+    .then(response => response.json())
+    .then(listaCapas => {
+        listaCapas.forEach(nombreCapa => {
+            if (configCapas[nombreCapa] && configCapas[nombreCapa].incluir) {
+                let nombreMostrar = configCapas[nombreCapa].nombreMostrar;
+                overlayMaps[nombreMostrar] = L.layerGroup();
+
+                mymap.on('overlayadd', function(eventLayer){
+                    if (eventLayer.name === nombreMostrar) {
+                        fetch(`http://localhost:3000/data/${nombreCapa}`)
+                            .then(response => response.json())
+                            .then(datosCapa => {
+                                L.geoJSON(datosCapa, {
+                                    style: function(feature) {
+                                        return getLayerSpecificStyle(nombreCapa)(feature) || getGeometryStyle(feature);
+                                    },
+                                    onEachFeature: function(feature, layer) {
+                                        onEachFeature(feature, layer, nombreCapa); // Pasar nombreCapa aquí
+                                    },
+                                    pointToLayer: function(feature, latlng) {
+                                        return L.circleMarker(latlng, getGeometryStyle(feature));
+                                    }
+                                }).addTo(overlayMaps[nombreMostrar]);
+                            });
+                    }
+                });
+
+                mymap.on('overlayremove', function(eventLayer){
+                    if (eventLayer.name === nombreMostrar) {
+                        overlayMaps[nombreMostrar].clearLayers();
+                    }
+                });
+            }
+        });
+
+        L.control.layers(baseMaps, overlayMaps, {collapsed: true}).addTo(mymap);
+    })
+    .catch(error => console.error('Error al cargar la lista de capas:', error));
+
+        
+    const mapeosNombres = {
+    'Construcciones_mnz': {
+        'pob_2015': 'Población 2015',
+        'pob_2016': 'Población 2016',
+        'pob_2017': 'Población 2017',
+        'pob_2018': 'Población 2018',
+        'pob_2019': 'Población 2019',
+        'pob_2020': 'Población 2020',
+        'pob_2021': 'Población 2021',
+        'pob_2022': 'Población 2022',
+        'pob_2023': 'Población 2023',
+        'pob_2024': 'Población 2024',
+        'pob_2025': 'Población 2025',
+        // Más mapeos según sea necesario
+    },
+    'barrios_de_riesgo': {
+        // Mapeos específicos para esta capa
+    },
+    // Repite para las demás capas
+    };
+
+
+    function onEachFeature(feature, layer, nombreCapa) {
+        if (!feature.properties) return;
+
+        let mapeoActual = mapeosNombres[nombreCapa] || {};
+
+        let popupContent = "<table class='popup-table'>";
+
+        const columnWidths = {
+            // Define el ancho de las columnas si es necesario
+        };
+
+        switch (nombreCapa) {
+            case 'Construcciones_mnz':
+                // Construir el popup para 'construcciones_mnz_proyectado'
+                // Personaliza aquí el contenido del popup para esta capa
+                for (let key in feature.properties) {
+                    if (key !== 'geom' && key !== 'gid' && key !== 'id' && key !== 'join_count' && key !== 'target_fid' && key !== 'codigo' && key !== 'max_numero' && key !== 'cod_dane_a' && key !== 'tp27_perso' && key !== 'area_efect' && key !== 'densidad' && key !== 'ocupantes'&& key !== 'area_efect' && key !== 'shape_leng' && key !== 'shape_area') {
+                        let nombreAmigable = mapeoActual[key] || key;
+                        let valor = feature.properties[key];
+                        // Verificar si es un número y formatear con 2 decimales
+                        if (!isNaN(valor)) {
+                            valor = parseFloat(valor).toFixed(2); // Formatear números con 2 decimales
+                        }
+                        const columnaClase = columnWidths[key] || '';
+                        popupContent += `<tr><td class="${columnaClase}">${nombreAmigable}</td><td class="${columnaClase}">${valor}</td></tr>`;
+                    }
+                }
+                break;
+
+            // Otras capas y casos aquí...
+                
+            case 'Barrios_De_Riesgo':
+                // Construir el popup para 'barrios_de_riesgo'
+                // Personaliza aquí el contenido del popup para esta capa
+                for (let key in feature.properties) {
+                    if (key !== 'geom' && key !== 'gid' && key !== 'id') {
+                        let nombreAmigable = mapeoActual[key] || key;
+                        let valor = feature.properties[key];
+                        if (typeof valor === 'number') {
+                            valor = valor.toFixed(2);
+                        }
+                        popupContent += `<tr><td>${nombreAmigable}</td><td>${valor}</td></tr>`;
+                    }
+                }
+                break;
+
+            case 'Proyecciones_De_Inundacion_2015_2025_Poblacion':
+                    // Construir el popup para 'proyecciones_de_inundacion_2015_2025_proyectado_2'
+                    // Personaliza aquí el contenido del popup para esta capa
+                    for (let key in feature.properties) {
+                        if (key !== 'geom' && key !== 'gid' && key !== 'id' && key !== 'join_count' && key !== 'target_fid' && key !== 'codigo' && key !== 'max_numero' && key !== 'cod_dane_a' && key !== 'tp27_perso' && key !== 'area_efect' && key !== 'densidad' && key !== 'ocupantes'&& key !== 'area_efect' && key !== 'shape_leng' && key !== 'shape_area' && key !== 'shape_le_1') {
+                            let nombreAmigable = mapeoActual[key] || key;
+                            let valor = feature.properties[key];
+                            // Verificar si es un número y formatear con 2 decimales
+                            if (!isNaN(valor)) {
+                                valor = parseFloat(valor).toFixed(2); // Formatear números con 2 decimales
+                            }
+                            const columnaClase = columnWidths[key] || '';
+                            popupContent += `<tr><td class="${columnaClase}">${nombreAmigable}</td><td class="${columnaClase}">${valor}</td></tr>`;
+                        }
+                    }
+                    break;
+            case 'Inundaciones_No_Visibles_Poblacion':
+                // Construir el popup para 'inundaciones_no_visibles'
+                // Personaliza aquí el contenido del popup para esta capa
+                for (let key in feature.properties) {
+                    if (key !== 'geom' && key !== 'gid' && key !== 'id') {
+                        let nombreAmigable = mapeoActual[key] || key;
+                        let valor = feature.properties[key];
+                        if (typeof valor === 'number') {
+                            valor = valor.toFixed(2);
+                        }
+                        popupContent += `<tr><td>${nombreAmigable}</td><td>${valor}</td></tr>`;
+                    }
+                }
+                break;
+            default:
+                // Contenido genérico para cualquier otra capa
+                for (let key in feature.properties) {
+                    if (key !== 'geom' && key !== 'id') {
+                        let nombreAmigable = mapeoActual[key] || key;
+                        let valor = feature.properties[key];
+                        if (typeof valor === 'number') {
+                            valor = valor.toFixed(2);
+                        }
+                        const columnaClase = columnWidths[key] || '';
+                        popupContent += `<tr><td class="${columnaClase}">${nombreAmigable}</td><td class="${columnaClase}">${valor}</td></tr>`;
+                    }
+                }
+            break;
+    }
+
+    popupContent += "</table>";
+    layer.bindPopup(popupContent, { maxWidth: "400px" });
+    }
+
+    function getGeometryStyle(feature) {
+        switch (feature.geometry.type) {
+            case 'Point':
+                // Estilo para puntos
+                return { radius: 8, fillColor: "#ff7800", color: "#000", weight: 1, opacity: 1, fillOpacity: 0.8 };
+            case 'LineString':
+                // Estilo para líneas
+                return { color: "#ff7800", weight: 3, opacity: 0.65 };
+            case 'MultiLineString':
+                // Estilo para líneas
+                return { color: "#ff7800", weight: 3, opacity: 0.65 }
+            case 'Polygon':
+                // Estilo para polígonos
+                return { fillColor: "#ff7800", color: "#000", weight: 2, opacity: 1, fillOpacity: 0.5 };
+            case 'MultiPolygon':
+                // Estilo para polígonos
+                return { fillColor: "#ff7800", color: "#000", weight: 2, opacity: 1, fillOpacity: 0.5 };
+            default:
+                return {}; // Estilo por defecto
+        }
+    }
+
+    function loadLayer(layerName) {
+        fetch(`/data/${layerName}`)
+        .then(response => response.json())
+        .then(data => {
+            rawData = data; // Inicialización de rawData
+            // ... resto del código
+            if (geoJsonLayer) {
+                mymap.removeLayer(geoJsonLayer);
+            }
+            var layerStyle = getLayerSpecificStyle(layerName);
+            geoJsonLayer = L.geoJSON(data, {
+                style: function (feature) {
+                    // Aplica primero el estilo específico de la capa
+                    return layerStyle(feature) || getGeometryStyle(feature);
+                },
+                pointToLayer: function (feature, latlng) {
+                    // Para puntos, puedes necesitar definir cómo se convierten en marcadores
+                    return L.circleMarker(latlng, getGeometryStyle(feature));
+                },
+                onEachFeature: onEachFeature
+            }).addTo(mymap);
+        })
+        .catch(error => console.error('Error al cargar la capa:', error));
+    }
+
+    function getLayerSpecificStyle(layerName) {
+        switch (layerName) {
+            case 'Construcciones_mnz':
+                return function(feature) {
+                    // Estilos específicos para 'construcciones_mnz_proyectado'
+                    return {
+                        opacity: 1,
+                    color: 'rgba(35,35,35,1.0)',
+                    dashArray: '',
+                    lineCap: 'butt',
+                    lineJoin: 'miter',
+                    weight: 1, 
+                    fill: true,
+                    fillOpacity: 1,
+                    fillColor: 'rgba(141,90,0,0.7490196078431373)',
+                    interactive: true,
+                        
+                        }; // Ejemplo de estilo
+                };
+                case 'Barrios_De_Riesgo':
+                return function(feature) {
+                    // Estilos específicos para 'construcciones_mnz_proyectado'
+                    return { 
+                        opacity: 1,
+                    color: 'rgba(35,35,35,1.0)',
+                    dashArray: '',
+                    lineCap: 'butt',
+                    lineJoin: 'miter',
+                    weight: 1, 
+                    fill: true,
+                    fillOpacity: 1,
+                    fillColor: 'rgba(225,199,167,0.6862745098039216)',
+                    interactive: true,
+                    }; // Ejemplo de estilo
+                };
+                case 'Inundaciones_No_Visibles_Poblacion':
+                return function(feature) {
+                    // Estilos específicos para 'construcciones_mnz_proyectado'
+                    return { 
+                        
+                        opacity: 1,
+                    color: 'rgba(1,213,255,1.0)',
+                    dashArray: '',
+                    lineCap: 'butt',
+                    lineJoin: 'miter',
+                    weight: 1, 
+                    fill: true,
+                    fillOpacity: 1,
+                    fillColor: 'rgba(1,213,255,0.6588235294117647)',
+                    interactive: true,
+                    }; // Ejemplo de estilo
+                };
+                case 'Proyecciones_De_Inundacion_2015_2025':
+                return function(feature) {
+                    // Estilos específicos para 'construcciones_mnz_proyectado'
+                    return { 
+                        
+                        opacity: 1,
+                    color: 'rgba(35,35,35,1.0)',
+                    dashArray: '',
+                    lineCap: 'butt',
+                    lineJoin: 'miter',
+                    weight: 1.0, 
+                    fill: true,
+                    fillOpacity: 1,
+                    fillColor: 'rgba(252,0,25,0.45098039215686275)',
+                    interactive: true,
+                    }; // Ejemplo de estilo
+                };
+            // Agrega casos adicionales según sea necesario
+            default:
+                return null; // Sin estilo específico
+        }
+    }
+
+    function enviarFormulario() {
+        // Obtener los valores del formulario
+        const nombre = document.getElementById('nombre').value;
+        const correo = document.getElementById('correo').value;
+        const barrio = document.getElementById('barrio').value;
+        const direccion = document.getElementById('direccion').value;
+
+        // Realizar alguna validación adicional si es necesario
+
+        // Enviar los datos al servidor
+        fetch('/enviar-formulario', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                nombre: nombre,
+                correo: correo,
+                barrio: barrio,
+                direccion: direccion
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Respuesta del servidor:', data);
+            // Aquí puedes realizar acciones adicionales después de enviar el formulario
+        })
+        .catch(error => {
+            console.error('Error al enviar el formulario:', error);
+        });
+    }
+
+    // Modifica la función para realizar la consulta con la tabla seleccionada
+    function realizarConsulta() {
+        // Obtiene el valor seleccionado del elemento de selección
+        const tablaSeleccionada = document.getElementById('tablaSelect').value;
+
+        // Realiza la solicitud al servidor con el nombre de la tabla
+        fetch(`/consulta/${tablaSeleccionada}`)
+            .then(response => response.text())
+            .then(htmlResult => {
+                // Muestra los resultados en el elemento con id "resultadoConsulta"
+                document.getElementById('resultadoConsulta').innerHTML = htmlResult;
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+</script>
+</html>

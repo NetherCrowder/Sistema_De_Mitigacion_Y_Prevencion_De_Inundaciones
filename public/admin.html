@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Panel del Administrador</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" integrity="sha384-rqndLXIcCBv+S8ktHzJPP4WBizXhFzLO86r2i5LAnHA6DHuXSdKVoVciSF5BJMDd" crossorigin="anonymous">
+</head>
+<header class="navbar navbar-dark bg-dark">
+    <div class="container-fluid">
+        <span class="navbar-brand mb-0 h1">Bienvenido Administrador</span>
+        <div class="dropdown">
+            <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                Volver al inicio/Ir al mapa
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                <li><a class="dropdown-item" href="mapa.html">Ir al mapa</a></li>
+                <li><a class="dropdown-item" href="index.html">Volver al inicio</a></li>
+            </ul>
+        </div>
+    </div>
+</header>
+<body>
+    <div class="container mt-4">
+        <div id="contenidoAdministrador">
+            <!-- Aquí se mostrarán los datos del administrador -->
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+        // Llama a la función realizarConsulta al cargar la página
+        realizarConsulta();
+        });
+        // Modifica la función para realizar la consulta con la tabla seleccionada
+        function realizarConsulta() {
+            // Realiza la solicitud al servidor con el nombre de la tabla
+            fetch(`/datos-administrador`)
+                .then(response => response.text())
+                .then(htmlResult => {
+                    // Muestra los resultados en el elemento con id "contenidoAdministrador"
+                    document.getElementById('contenidoAdministrador').innerHTML = htmlResult;
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        // Agrega esta función al script
+        function marcarComoRevisado(id) {
+            // Realiza una solicitud al servidor para actualizar el estado en la base de datos
+            fetch(`/marcar-revisado/${id}`, { method: 'PUT' })
+                .then(response => {
+                    if (response.ok) {
+                        // Si la actualización fue exitosa, realiza una nueva consulta y actualiza la tabla
+                        realizarConsulta();
+                    } else {
+                        console.error('Error al marcar como revisado');
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+    </script>
+</body>
+</html>
